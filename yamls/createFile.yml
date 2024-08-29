@@ -1,0 +1,6 @@
+---
+- hosts: worker
+  become: true
+  tasks:
+  - name: Create a file
+    file: path=/etc/kris.txt state=touch

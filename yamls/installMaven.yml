@@ -1,0 +1,12 @@
+---
+- hosts : all
+  become : true
+  tasks :
+    - name : Install maven plugin
+      apt :
+        name : maven
+        state : present
+    - name : Verify if maven is installed
+      shell : mvn --version
+      register : ps
+    - debug: var=ps.stdout_lines

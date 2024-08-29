@@ -1,0 +1,51 @@
+---
+- hosts: all
+  become: true
+  tasks:
+    - name: install jdk
+      apt:
+        name: openjdk-17-jdk
+        state: present
+    - name: verify java version
+      command: java --version
+      register: ps
+    - debug: var=ps.stdout_lines
+
+- hosts: all
+  become: true
+  tasks:
+    - name: Add Jenkins repository key
+      ansible.builtin.get_url:
+        url: https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key
+        dest: /usr/share/keyrings/jenkins-keyring.asc
+
+    - name: Add Jenkins repository
+      ansible.builtin.apt_repository:
+        repo: deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] https://pkg.jenkins.io/debian-stable binary/
+        state: present
+
+    - name: Update apt cache again after adding Jenkins repository
+      ansible.builtin.apt:
+        update_cache: yes
+        
+     - name: install jenkins
+      apt:
+        name: jenkins
+        state: present
+
+    - name: Start Jenkins service
+      ansible.builtin.systemd:
+        name: jenkins
+        state: started
+        enabled: yes
+
+    - name: Ensure Jenkins  on port 8080
+      ansible.builtin.wait_for:
+        port: 8080
+        delay: 10
+        state: started  
+
+    - name: Get the password
+      command: cat /var/lib/jenkins/secrets/initialAdminPassword
+      register : pwd
+    - debug: var=pwd.stdout_lines 

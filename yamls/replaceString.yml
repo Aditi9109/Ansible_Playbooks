@@ -1,0 +1,14 @@
+---
+- hosts : all
+  become : true
+  tasks :
+    - name : append content to existing file
+      lineinfile :
+        path : /home/ubuntu/myfile.txt
+        line : "Hello this is Aditi again /n Hello everyone"
+
+    - name : replace string Hello to Hieee
+      replace :
+        path : /home/ubuntu/myfile.txt
+        regexp : 'Hello'
+        replace : 'Hieee'

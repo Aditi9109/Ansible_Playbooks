@@ -1,0 +1,10 @@
+---
+- hosts : all
+  become : true
+  tasks :
+    - name : remove/delete user
+      user :
+        name : aditi
+        state : absent
+        remove : yes
+        force : yes

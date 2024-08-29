@@ -1,0 +1,13 @@
+---
+- hosts : all
+  become : true
+  tasks :
+    - name : copy content to file
+      copy :
+        content : "Hello Aditi \n"
+        dest : /home/ubuntu/myfile.txt
+
+    - name : move file to another location
+      copy :
+        src : /home/ubuntu/myfile.txt
+        dest : /tmp/myfile.txt
