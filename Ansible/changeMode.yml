@@ -1,0 +1,11 @@
+---
+- hosts : all
+  become : true
+  tasks :
+    - name : Create Directory with mode 775
+      file :
+        path : /etc/kris
+        state : directory
+        mode : 775
+        owner : root
+        group : root

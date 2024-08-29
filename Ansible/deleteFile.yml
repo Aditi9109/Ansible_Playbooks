@@ -1,0 +1,8 @@
+---
+- hosts : all
+  become: true
+  tasks:
+    - name : Delete existing file
+      file :
+        path: /etc/kris.txt
+        state : absent

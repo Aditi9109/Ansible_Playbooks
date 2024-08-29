@@ -1,0 +1,12 @@
+---
+- hosts: all
+  become: true
+  tasks:
+  - name: Install Package GIT
+    apt :
+      name : git
+      state : present
+  - name: Install Package VIM
+    apt :
+      name : vim
+      state : present
