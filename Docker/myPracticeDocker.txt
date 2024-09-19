@@ -1,0 +1,420 @@
+----------------------------------------------------------DOCKER-----------------------------------------------------------------------------
+
+1. install docker-
+apt install docker.io
+
+2. install image in docker
+
+
+3. remove image in docker
+
+4. docker uninstall
+
+
+
+docker - swarm -----------------------------------------------------------------------------------------------------------------------
+
+1. Create a Swarm - below command will make this server as leader
+$ docker swarm init --advertise-addr 54.214.185.221
+
+(take the command from here and run in all the workers)
+
+2.
+$ docker swarm join-token manager  (this command to join as manager)
+
+3. List all the nodes/servers in the swarm
+$docker node ls
+
+4. if you want to leave the swarm, write this command in any server
+$ docker swarm leave (--force)
+
+5. all info about the docker
+$ docker info
+
+6. create & start a service 'Nginx' on Port 80, with name 'web', replica = 5 , i.e. always 5 services of nginx will run across the swarm nodes
+$ docker service create --replicas 5 -p 80:80 --name web nginx
+
+overall progress: 5 out of 5 tasks
+1/5: running   [==================================================>]
+2/5: running   [==================================================>]
+3/5: running   [==================================================>]
+4/5: running   [==================================================>]
+5/5: running   [==================================================>]
+
+7. to view what are the services and their replicas created
+$ docker service ls
+
+ID             NAME      MODE         REPLICAS   IMAGE          PORTS
+uevhghkda017   web       replicated   5/5        nginx:latest   *:80->80/tcp
+
+8. service 'web' status across all the nodes
+$ docker service ps web
+
+ID             NAME      IMAGE          NODE      DESIRED STATE   CURRENT STATE            ERROR     PORTS
+x5keff8r93vv   web.1     nginx:latest   W1        Running         Running 40 seconds ago
+1l6wsfoq4w6w   web.2     nginx:latest   M         Running         Running 41 seconds ago
+ibxvulyzuq4b   web.3     nginx:latest   W2        Running         Running 40 seconds ago
+u0l2qe57g54j   web.4     nginx:latest   W1        Running         Running 40 seconds ago
+bkuxvl5rblf4   web.5     nginx:latest   W2        Running         Running 40 seconds ago
+
+9. scale up/down the no of replicas
+$ docker service scale web=2
+
+10. docker health check of self and workers(only leader can)
+$ docker node inspect self
+$ docker node inspect W1
+
+if status is as below while inspect, that means Worker is available to take another service.
+Status:
+ State: Ready
+ Availability: Active
+ 
+11. Leader can drain the availabitily of the worker
+$ docker node update --availability drain W1
+
+This means that W1 will not be available for taking up another service.
+
+12. remove service from docker
+$ docker service rm web
+ 
+$ docker service ps web
+no such service: web
+
+$ docker service ls
+ID        NAME      MODE      REPLICAS   IMAGE     PORTS
+
+13. Incase leader wants to roll out update of the image in all the nodes
+$ docker service update --image <imagename>:<version> web
+
+
+Uninstall docker from ubuntu----------------------------------------------------------------------------------------------------------------------
+
+1. 
+$ systemctl stop docker
+
+Stopping 'docker.service', but its triggering units are still active:
+docker.socket
+
+2. now, uninstall docker packages
+
+$ apt-get purge -y docker-ce docker-ce-cli containerd.io
+$ apt-get purge -y docker docker-engine docker.io 
+
+3. Remove docker data
+
+$ rm -rf /var/lib/docker
+$ rm -rf /var/lib/containerd
+
+4. Remove Docker Group (if created):
+$ groupdel docker
+
+5. Clean Up Unused Packages:
+$ apt-get autoremove -y
+
+6. Remove Docker Configuration Files (optional):
+$ rm -rf /etc/docker
+     Verify Removal:
+$ docker --version
+if still presenet
+
+7. check for the remaining binaries files of docker present
+$ find /usr/bin /usr/local/bin -name '*docker*'
+
+/usr/bin/docker
+/usr/bin/docker-proxy
+/usr/bin/docker-init
+/usr/bin/dockerd
+(i.e. these files are still present)
+
+remove them
+$ find /usr/bin /usr/local/bin -name '*docker*' -type f -exec rm -f {} +
+
+8. Check for Docker Installation via Snap
+If Docker was installed via Snap, it might not be removed using apt. Check if Docker is installed as a Snap package:
+$ snap list | grep docker
+If Docker is listed, remove it with:
+$ snap remove docker
+
+9.Check for Docker Packages
+Verify that no Docker-related packages are installed. Run:
+$ dpkg -l | grep -i docker
+If any Docker-related packages appear, remove them:
+$ apt-get purge -y <package_name> --------------- apt-get purge -y docker.io
+
+10. Verify again if docker is present
+$ docker --version
+bash: /usr/bin/docker: No such file or directory
+
+
+alternatively -----
+1. Create a removeDocker.sh file
+$ touch removeDocker.sh
+
+2. enter all these commands in the file sequencially.
+
+$vi removeDocker.sh
+
+[
+systemctl stop docker
+apt-get purge -y docker-ce docker-ce-cli containerd.io
+apt-get purge -y docker docker-engine docker.io
+rm -rf /var/lib/docker
+rm -rf /var/lib/containerd
+groupdel docker
+apt-get autoremove -y
+rm -rf /etc/docker
+find /usr/bin /usr/local/bin -name '*docker*' -type f -exec rm -f {} +
+snap list | grep docker
+snap remove docker
+dpkg -l | grep -i docker
+apt-get purge -y docker.io
+]
+
+3. run the file
+$ sh removeDocker.sh
+
+> this will generate all the execution logs and delete the docker.
+verify once done
+$ docker --version
+
+
+
+Create your own image.----------------------------------------------------------------------------------------------------------------------------
+
+1. create a Dockerfile in any path (empty txt file)
+$ touch Dockerfile
+
+
+2. create script to modify/add images
+go to file editor mode
+
+$vi Dockerfile
+
+FROM alpine:3.4     (it take reference of one basic image)
+RUN apk update      (add-Run-install:3.4)
+RUN apk add vim     (add-Run-install vim)
+RUN apk add curl    (add-Run-install curl)
+
+3. build above file
+$docker build -t takacsmark/alpine-smarter:1.0 .
+
+-t takacsmark  (tag name- give any)
+alpine-smarter:1.0   (human readable name  with version)
+note the . (dot) at the end    (specify the path to read Dockerfile, in our case its in the same path so .(dot))
+
+on running the above command, it generates output as --------------
+
+Step 1/4 : FROM alpine:3.4
+3.4: Pulling from library/alpine
+c1e54eec4b57: Pull complete
+Digest: sha256:b733d4a32c4da6a00a84df2ca32791bb03df95400243648d8c539e7b4cce329c
+Status: Downloaded newer image for alpine:3.4
+ ---> b7c5ffe56db7
+Step 2/4 : RUN apk update
+ ---> Running in 53f049a8a2a7
+fetch http://dl-cdn.alpinelinux.org/alpine/v3.4/main/x86_64/APKINDEX.tar.gz
+fetch http://dl-cdn.alpinelinux.org/alpine/v3.4/community/x86_64/APKINDEX.tar.gz
+v3.4.6-316-g63ea6d0 [http://dl-cdn.alpinelinux.org/alpine/v3.4/main]
+v3.4.6-160-g14ad2a3 [http://dl-cdn.alpinelinux.org/alpine/v3.4/community]
+OK: 5973 distinct packages available
+Removing intermediate container 53f049a8a2a7
+ ---> 7a665c862f30
+Step 3/4 : RUN apk add vim
+ ---> Running in 0b16209f9e6e
+(1/5) Installing lua5.2-libs (5.2.4-r2)
+(2/5) Installing ncurses-terminfo-base (6.0_p20171125-r0)
+(3/5) Installing ncurses-terminfo (6.0_p20171125-r0)
+(4/5) Installing ncurses-libs (6.0_p20171125-r0)
+(5/5) Installing vim (7.4.1831-r3)
+Executing busybox-1.24.2-r14.trigger
+OK: 37 MiB in 16 packages
+Removing intermediate container 0b16209f9e6e
+ ---> 1bb5777ef444
+Step 4/4 : RUN apk add curl
+ ---> Running in 0b135d3baeb6
+(1/4) Installing ca-certificates (20161130-r0)
+(2/4) Installing libssh2 (1.7.0-r0)
+(3/4) Installing libcurl (7.60.0-r1)
+(4/4) Installing curl (7.60.0-r1)
+Executing busybox-1.24.2-r14.trigger
+Executing ca-certificates-20161130-r0.trigger
+OK: 38 MiB in 20 packages
+Removing intermediate container 0b135d3baeb6
+ ---> 96178701ab0e
+Successfully built 96178701ab0e
+Successfully tagged takacsmark/alpine-smarter:1.0
+
+
+analysis-------
+
+at each of these steps docker created its intermediate images, you can see the image id after each step
+Step 1/4 : FROM alpine:3.4  ---> 7a665c862f30
+Step 2/4 : RUN apk update   ---> 7a665c862f30
+Step 3/4 : RUN apk add vim    ---> 1bb5777ef444
+Step 4/4 : RUN apk add curl  ---> 96178701ab0e
+
+4. to view all the images created      (-a to list all images on your computer including intermediary images)
+$ docker images -a 
+
+REPOSITORY                  TAG       IMAGE ID       CREATED         SIZE
+takacsmark/alpine-smarter   1.0       96178701ab0e   3 minutes ago   32.2MB
+<none>                      <none>    1bb5777ef444   3 minutes ago   30.6MB
+<none>                      <none>    7a665c862f30   3 minutes ago   5.58MB
+alpine                      3.4       b7c5ffe56db7   5 years ago     4.82MB
+
+(here if you see, the image ID are same what created above after each layers
+
+5. now if i add new install in the docker file along with the existing
+
+RUN apk add git
+
+and now run the docker build command again
+$ docker build -t takacsmark/alpine-smarter:1.0 .
+
+it will show output as----
+
+Step 1/5 : FROM alpine:3.4
+ ---> b7c5ffe56db7
+Step 2/5 : RUN apk update
+ ---> Using cache
+ ---> 7a665c862f30
+Step 3/5 : RUN apk add vim
+ ---> Using cache
+ ---> 1bb5777ef444
+Step 4/5 : RUN apk add curl
+ ---> Using cache
+ ---> 96178701ab0e
+Step 5/5 : RUN apk add git
+ ---> Running in b92fd0aee9ba
+(1/3) Installing expat (2.2.0-r1)
+(2/3) Installing pcre (8.38-r1)
+(3/3) Installing git (2.8.6-r0)
+Executing busybox-1.24.2-r14.trigger
+OK: 54 MiB in 23 packages
+Removing intermediate container b92fd0aee9ba
+ ---> b1f6fcdc303c
+Successfully built b1f6fcdc303c
+Successfully tagged takacsmark/alpine-smarter:1.0
+
+
+analysis--
+The above means that it did not create new images for step1-4 (as its already there, it took from cache), it only created new images for git
+$ docker images -a
+
+REPOSITORY                  TAG       IMAGE ID       CREATED             SIZE
+takacsmark/alpine-smarter   1.0       b1f6fcdc303c   2 minutes ago       48.9MB
+<none>                      <none>    96178701ab0e   About an hour ago   32.2MB
+<none>                      <none>    1bb5777ef444   About an hour ago   30.6MB
+<none>                      <none>    7a665c862f30   About an hour ago   5.58MB
+alpine                      3.4       b7c5ffe56db7   5 years ago         4.82MB
+
+6. Optimizing docker file
+
+FROM alpine:3.4
+RUN apk update && \
+    apk add curl && \
+    apk add vim && \
+    apk add git
+
+best practice is to show in alphabetical order
+
+FROM alpine:3.4
+RUN apk update && \
+    apk add curl && \
+    apk add git && \
+    apk add vim
+
+also can be optimized more
+
+FROM alpine:3.4
+RUN apk update && apk add \
+    curl \
+    git \
+    vim
+
+
+Apache install through docker file-------------------------------------------------------------------------------------------------------------
+
+1. create apache directory with the hierarchy
+$ mkdir -p /var/docker/ubuntu/apache 
+
+2. go to apache directory
+$ cd /var/docker/ubuntu/apache
+
+3. Create Dockerfile & add below contents
+$ vi Dockerfile
+
+[
+FROM ubuntu
+MAINTAINER  your_name  <user@domain.tld>
+RUN apt-get update
+RUN apt-get -y install apache2
+RUN echo “Hello Apache server on Ubuntu image” > /var/www/html/index.html
+EXPOSE 80
+CMD /usr/sbin/apache2ctl -D FOREGROUND
+]
+
+4. Build the docker image
+$ docker build -t ubuntu-webserver /var/docker/ubuntu/apache
+
+Step 1/7 : FROM ubuntu
+latest: Pulling from library/ubuntu
+31e907dcc94a: Pull complete
+Digest: sha256:8a37d68f4f73ebf3d4efafbcf66379bf3728902a8038616808f04e34a9ab63ee
+Status: Downloaded newer image for ubuntu:latest
+ ---> edbfe74c41f8
+Step 2/7 : MAINTAINER  your_name  <aditi.singh.9109@gmail.com>
+ ---> 29dd582dbf88
+Step 3/7 : RUN apt-get update
+ ---> d33ee98e5ae8
+Step 4/7 : RUN apt-get -y install apache2
+  ---> c3fec834b6da
+Step 5/7 : RUN echo “Hello Apache server on Ubuntu Image” > /var/www/html/index.html
+---> b4c9c2d9c606
+Step 6/7 : EXPOSE 80
+ ---> 068204424673
+Step 7/7 : CMD /usr/sbin/apache2ctl -D FOREGROUND
+ ---> d5603aec6653
+ 
+ 
+ 5. 
+ $ docker images -a
+REPOSITORY         TAG       IMAGE ID       CREATED              SIZE
+<none>             <none>    068204424673   About a minute ago   231MB
+ubuntu-webserver   latest    d5603aec6653   About a minute ago   231MB
+<none>             <none>    b4c9c2d9c606   About a minute ago   231MB
+<none>             <none>    c3fec834b6da   About a minute ago   231MB
+<none>             <none>    d33ee98e5ae8   2 minutes ago        118MB
+<none>             <none>    29dd582dbf88   2 minutes ago        78.1MB
+ubuntu             latest    edbfe74c41f8   3 weeks ago          78.1MB
+
+
+6: Expose 81 port for outside 
+go to apache directory path - /var/docker/ubuntu/apache
+$ docker run -d -p 81:80 ubuntu-webserver
+
+7: Check webpage 
+http://172.17.0.1:81  [<Server_ipaddress>:81]
+
+also i=on linux server>>>
+root@ip-172-31-29-63:/var/docker/ubuntu/apache# curl http://54.200.248.223:81/
+“Hello Apache server on Ubuntu Image”
+
+
+pull & push images to dockerhub -----------------------------------------------------------------------------------------------------------------
+
+create account in dockerhub - aditi1990/Lockdown2020
+
+
+
+
+
+
+
+
+
+
+
+
+
+

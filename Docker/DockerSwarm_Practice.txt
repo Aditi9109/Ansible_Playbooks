@@ -1,0 +1,102 @@
+1. Take 2 EC2 instances - Master & Worker : (passwordless ssh-keygen setup)
+Install docker in both the instances
+apt install docker.io
+
+2. create docker swarm setup
+
+on master >
+$ docker swarm init --advertise-addr  <manager1> 
+$ docker swarm init --advertise-addr 34.217.16.149
+
+take the docker join command from here, and run it in worker   ( docker swarm join --token <tokenid>)
+
+3. list all the docker nodes
+$ docker node ls
+
+Output ----
+ID                            HOSTNAME   STATUS    AVAILABILITY   MANAGER STATUS   ENGINE VERSION
+ptwjvtz2x35fabn4sfb5upypp *   M          Ready     Active         Leader           24.0.7
+vtp2gbg2o1kk3fsaunscbazu8     W          Ready     Active                          24.0.7
+
+
+4. if you want to leave the swarm, write this command in any server
+$ docker swarm leave (--force)
+
+5. all info about the docker
+$ docker info
+
+6. create & start a service 'Nginx' on Port 80, with name 'web', replica = 5 , i.e. always 5 services of nginx will run across the swarm nodes
+$ docker service create --replicas 5 -p 80:80 --name web nginx
+
+output-----
+fa1c3a6t6446hlimaap9tq06k
+overall progress: 5 out of 5 tasks
+1/5: running   [==================================================>]
+2/5: running   [==================================================>]
+3/5: running   [==================================================>]
+4/5: running   [==================================================>]
+5/5: running   [==================================================>]
+verify: Service converged
+
+
+7. to list/view what are the services and their replicas created
+$ docker service ls
+
+Output---
+ID             NAME      MODE         REPLICAS   IMAGE          PORTS
+fa1c3a6t6446   web       replicated   5/5        nginx:latest   *:80->80/tcp
+
+here PORT 80:80 is [VM server port : container port]
+
+8. To check where my 5 replicas are running (on which servers/ec2instances)
+docker service ps web
+
+Output-----
+ID             NAME      IMAGE          NODE      DESIRED STATE   CURRENT STATE           ERROR     PORTS
+y7b3e7uh0q9k   web.1     nginx:latest   W         Running         Running 7 minutes ago
+f0jpcya6p7it   web.2     nginx:latest   M         Running         Running 7 minutes ago
+rdy77stl0a2e   web.3     nginx:latest   W         Running         Running 7 minutes ago
+ny0vathjvw2y   web.4     nginx:latest   M         Running         Running 7 minutes ago
+txpy8i1x8uco   web.5     nginx:latest   W         Running         Running 7 minutes ago
+
+2 containers runs in Master, & 3 in Workers
+
+9. Scale container
+$docker service ps web
+
+Output-----
+ID             NAME      IMAGE          NODE      DESIRED STATE   CURRENT STATE            ERROR     PORTS
+y7b3e7uh0q9k   web.1     nginx:latest   W         Running         Running 9 minutes ago
+f0jpcya6p7it   web.2     nginx:latest   M         Running         Running 10 minutes ago
+rdy77stl0a2e   web.3     nginx:latest   W         Running         Running 9 minutes ago
+ny0vathjvw2y   web.4     nginx:latest   M         Running         Running 10 minutes ago
+
+10. docker health check of self and workers(only leader can)
+$ docker node inspect self
+$ docker node inspect W1
+
+if status is as below while inspect, that means Worker is available to take another service.
+Status:
+ State: Ready
+ Availability: Active
+
+11. Leader can drain the availabitily of the worker
+$ docker node update --availability drain W1
+
+This means that W1 will not be available for taking up another service.
+
+12. remove service from docker
+$ docker service rm web
+ 
+$ docker service ps web
+no such service: web
+
+$ docker service ls
+ID        NAME      MODE      REPLICAS   IMAGE     PORTS
+
+13. Incase leader wants to roll out update of the image in all the nodes
+$ docker service update --image <imagename>:<version> web
+
+
+
+
